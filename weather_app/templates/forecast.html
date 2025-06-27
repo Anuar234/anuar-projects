@@ -1,0 +1,69 @@
+<!-- templates/forecast.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>5-Day Forecast for {{.City}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+
+</head>
+<body class="bg-blue-50 text-gray-800 font-sans p-6">
+
+     <canvas id="tempChart" class="mt-6 w-full h-64"></canvas>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold text-center mb-6">📅 5-Day Forecast for {{.City}}</h1>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {{range .Forecasts}}
+            <div class="bg-white shadow rounded-lg p-4 text-center">
+                <h2 class="text-lg font-semibold mb-2">{{.Date}}</h2>
+                <img src="{{.IconURL}}" alt="icon" class="mx-auto w-16 h-16 mb-2">
+                <p class="text-xl font-bold">{{.Temp}}°C</p>
+                <p class="text-gray-600">{{.Description}}</p>
+            </div>
+            {{end}}
+        </div>
+        <div class="text-center mt-6">
+            <a href="/" class="inline-block bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                ← Back
+            </a>
+        </div>
+    </div>
+
+    <script>
+const labels = [
+    {{range .Forecasts}}"{{.Date}}",{{end}}
+];
+const temps = [
+    {{range .Forecasts}}{{.Temp}},{{end}}
+];
+
+new Chart(document.getElementById('tempChart'), {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'Temperature (°C)',
+            data: temps,
+            borderColor: 'rgb(59,130,246)',
+            tension: 0.3,
+            fill: true,
+            backgroundColor: 'rgba(59,130,246,0.1)',
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    }
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Weather App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+</head>
+<body class="bg-blue-50 text-gray-900 font-sans p-6">
+    <div class="max-w-xl mx-auto bg-white shadow-md rounded-lg p-6">
+        <h1 class="text-2xl font-bold mb-4 text-center">🌦️ Weather App</h1>
+
+        <form action="/search" method="GET" class="space-y-4">
+    <input type="text" name="city" placeholder="Enter city"
+           class="border rounded p-2 w-full" required>
+
+    <div class="flex gap-4 items-center">
+        <label>
+            <input type="radio" name="mode" value="weather" checked>
+            Current Weather
+        </label>
+        <label>
+            <input type="radio" name="mode" value="forecast">
+            5-Day Forecast
+        </label>
+    </div>
+
+    <button type="submit"
+            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded w-full">
+        Show
+    </button>
+</form>
+
+
+        {{if .}}
+        <div class="mt-6">
+            <h2 class="text-lg font-semibold mb-2">Recently searched cities:</h2>
+<ul class="list-disc pl-6">
+    {{range .}}
+        <li>
+            <a href="/search?city={{.}}&mode=weather" class="text-blue-600 hover:underline">
+  {{.}}
+</a>
+
+        </li>
+    {{end}}
+</ul>
+
+        </div>
+        {{end}}
+    </div>
+</body>
+</html>
