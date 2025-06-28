@@ -6,75 +6,101 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"weather_app/templates/cache"
 )
 
+type ForecastService struct {
+	cache *cache.MemoryCache
+}
+
 type ForecastItem struct {
-    Date        string
-    Temp        float64
-    Description string
-    IconURL     string
+	Date        string
+	Temp        float64
+	Description string
+	IconURL     string
 }
 
 type ForecastData struct {
-    City      string
-    Forecasts []ForecastItem
+	City      string
+	Forecasts []ForecastItem
 }
 
-func GetForecast(city string) (ForecastData, error) {
-    apiKey := os.Getenv("OPENWEATHER_API_KEY")
-    url := fmt.Sprintf(
-        "https://api.openweathermap.org/data/2.5/forecast?q=%s&appid=%s&units=metric&lang=en",
-        city, apiKey,
-    )
+// initiliazes the forecast service with a cache instance
+func NewForestSerivce(c *cache.MemoryCache) *ForecastService {
+	return &ForecastService{cache: c}
+}
 
-    resp, err := http.Get(url)
-    if err != nil {
-        return ForecastData{}, err
-    }
-    defer resp.Body.Close()
+func (s *ForecastService) GetForecast(city string) (ForecastData, error) {
 
-    var raw map[string]interface{}
-    if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-        return ForecastData{}, err
-    }
+	// normalize city name for cache
+	key := fmt.Sprintf("%s_forecast", city)
 
-    list, ok := raw["list"].([]interface{})
-    if !ok {
-        return ForecastData{}, fmt.Errorf("no forecast data available")
-    }
+	//chechk cache
+	if data, ok := s.cache.Get(key); ok {
+		return data.(ForecastData), nil
+	}
 
-    var forecasts []ForecastItem
-    seenDays := map[string]bool{}
+	apiKey := os.Getenv("OPENWEATHER_API_KEY")
+	if apiKey == "" {
+		return ForecastData{}, fmt.Errorf("key not set")
+	}
+	url := fmt.Sprintf(
+		"https://api.openweathermap.org/data/2.5/forecast?q=%s&appid=%s&units=metric&lang=en",
+		city, apiKey,
+	)
 
-    for _, entry := range list {
-        item := entry.(map[string]interface{})
-        dtTxt := item["dt_txt"].(string)
+	resp, err := http.Get(url)
+	if err != nil {
+		return ForecastData{}, err
+	}
+	defer resp.Body.Close()
 
-        parsedTime, _ := time.Parse("2006-01-02 15:04:05", dtTxt)
-        day := parsedTime.Weekday().String()
+	var raw map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		return ForecastData{}, err
+	}
 
-        if seenDays[day] {
-            continue
-        }
-        seenDays[day] = true
+	list, ok := raw["list"].([]interface{})
+	if !ok {
+		return ForecastData{}, fmt.Errorf("no forecast data available")
+	}
 
-        main := item["main"].(map[string]interface{})
-        weather := item["weather"].([]interface{})[0].(map[string]interface{})
+	var forecasts []ForecastItem
+	seenDays := map[string]bool{}
 
-        forecasts = append(forecasts, ForecastItem{
-            Date:        day,
-            Temp:        main["temp"].(float64),
-            Description: weather["description"].(string),
-            IconURL:     fmt.Sprintf("https://openweathermap.org/img/wn/%s@2x.png", weather["icon"].(string)),
-        })
+	for _, entry := range list {
+		item := entry.(map[string]interface{})
+		dtTxt := item["dt_txt"].(string)
 
-        if len(forecasts) == 5 {
-            break
-        }
-    }
+		parsedTime, _ := time.Parse("2006-01-02 15:04:05", dtTxt)
+		day := parsedTime.Weekday().String()
 
-    return ForecastData{
-        City:      city,
-        Forecasts: forecasts,
-    }, nil
+		if seenDays[day] {
+			continue
+		}
+		seenDays[day] = true
+
+		main := item["main"].(map[string]interface{})
+		weather := item["weather"].([]interface{})[0].(map[string]interface{})
+
+		forecasts = append(forecasts, ForecastItem{
+			Date:        day,
+			Temp:        main["temp"].(float64),
+			Description: weather["description"].(string),
+			IconURL:     fmt.Sprintf("https://openweathermap.org/img/wn/%s@2x.png", weather["icon"].(string)),
+		})
+
+		if len(forecasts) == 5 {
+			break
+		}
+	}
+
+	forecast := ForecastData{
+		City:      city,
+		Forecasts: forecasts,
+	}
+
+	s.cache.Set(key, forecast)
+
+	return forecast, nil
 }

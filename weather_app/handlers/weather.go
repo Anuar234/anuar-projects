@@ -6,21 +6,29 @@ import (
 	"weather_app/services"
 )
 
-func WeatherHandler(w http.ResponseWriter, r *http.Request) {
-    city := r.URL.Query().Get("city")
-    if city == "" {
-        http.Redirect(w, r, "/", http.StatusSeeOther)
-        return
-    }
+type WeatherHadnler struct {
+	service *services.WeatherAPIService
+}
 
-    data, err := services.GetCurrentWeather(city)
-    if err != nil {
-        http.Error(w, "Error fetching weather", http.StatusInternalServerError)
-        return
-    }
+func NewWeatherHandler(s *services.WeatherAPIService) *WeatherHadnler {
+	return &WeatherHadnler{service: s}
+}
 
-    addToRecent(city)
+func (h *WeatherHadnler) WeatherHandler(w http.ResponseWriter, r *http.Request) {
+	city := r.URL.Query().Get("city")
+	if city == "" {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
 
-    tmpl := template.Must(template.ParseFiles("templates/weather.html"))
-    tmpl.Execute(w, data)
+	data, err := h.service.GetCurrentWeather(city)
+	if err != nil {
+		http.Error(w, "Error fetching weather", http.StatusInternalServerError)
+		return
+	}
+
+	addToRecent(city)
+
+	tmpl := template.Must(template.ParseFiles("templates/weather.html"))
+	tmpl.Execute(w, data)
 }
